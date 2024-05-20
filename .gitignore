@@ -7,3 +7,4 @@ compiled/
 doc
 sludge-dist*
 *.exe
+/sludge
