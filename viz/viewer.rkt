@@ -1,5 +1,12 @@
 #lang racket/gui
 
+;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+;; | Modified by Cadence Ember
+;; | Replaced design-path with design-thunk to support included pre-compiled models
+;; | Removed debug logs and F5 keybind for Sludge
+;; \__________________________
+
+
 ; Basic GL viewer with design loading and recompilation support.
 
 (require opengl)
@@ -17,7 +24,7 @@
     (inherit with-gl-context swap-gl-buffers)
 
     ; The path to the design file.  TODO: remove the default once this is done.
-    (init-field design-path)
+    (init-field design-thunk)
 
     ; Have we tried to load the design at least once?  This is used to trigger
     ; an immediate reload on first startup, without entering a reload loop
@@ -67,21 +74,20 @@
 
     (define/overment (on-char event)
       (case (send event get-key-code)
-        [(f5) (reload) (low-priority-refresh)]
+        #;[(f5) (reload) (low-priority-refresh)]
         [else (inner (void) on-char event)]))
 
     (define/public (reload)
-      (printf "Recompiling design at ~a~n" design-path)
-      (let ([gen (load-frep design-path)])
+      ;; (printf "Recompiling design at ~a~n" design-path)
+      (let ([gen design-thunk])
         (unless (procedure? gen)
           ; This handles silly cases like '(define design 3)'.
-          (error "Design at" design-path
-                 "binds 'design', but not to a procedure."))
+          (error 'viewer-reload "Design binds `design' to ~v, which is not a procedure" gen))
 
         (let-values ([(count node) (enumerate-nodes 0
                                      (first (canonicalize
                                               (call-with-edsl-root gen))))])
-          (printf "Design contains ~a nodes.~n" count)
+          #;(printf "Design contains ~a nodes.~n" count)
           (set! setup-called #f)
           (set! design-node node)
           (low-priority-refresh))))

@@ -1,5 +1,11 @@
 #lang racket
 
+;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+;; | Modified by Cadence Ember
+;; | Edited ruckus$ assignment to support built-in models
+;; \__________________________
+
+
 ; #lang support.
 ;
 ; This is a language file intended for use with syntax/module-reader.  It gets
@@ -78,8 +84,8 @@
     [(_ expr ...)
      ; Promote a couple of symbols to real-live identifiers in the loaded
      ; module's lexical context.
-     (with-syntax ([design$ (datum->syntax stx (gensym "design"))]
-                   [ruckus$ (datum->syntax stx 'ruckus)]
+     (with-syntax ([design$ (datum->syntax stx 'design)]
+                   [ruckus$ (datum->syntax stx "../../main.rkt")]
                    [parts$ (datum->syntax stx null)])
        #`(#%module-begin
           (require ruckus$)

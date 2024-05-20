@@ -1,8 +1,17 @@
 #lang racket/gui
 
+;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+;; | Modified by Cadence Ember
+;; | Edited default detail, keybinds, removed debug logs for Sludge
+;; | Fixed bug where glViewport wasn't scaled
+;; | Added gui-easy compatibility with spheretrace-viewer-view% and spheretrace-viewer definitions
+;; \__________________________
+
 ; Extension of the basic GL viewer with features to support 3D spheretracing
 ; visualization.
 
+(require racket/gui/easy)
+(require (only-in racket/gui/easy/private/observable ->obs))
 (require racket/runtime-path)
 (require opengl)
 (require ffi/vector)
@@ -12,7 +21,7 @@
 (require "./viewer.rkt")
 (require "./glsl.rkt")
 
-(provide spheretrace-viewer%)
+(provide spheretrace-viewer)
 
 ; Path anchors for finding the GLSL files we load at runtime.  This forces a
 ; correct path to be generated at compile time, and includes the file in any
@@ -22,6 +31,10 @@
 
 ; ------------------------------------------------------------------------------
 ; OpenGL utilities.
+
+; Utility for altering GL sizes to match the screen pixel ratio.
+(define (dpi logical-pixels)
+  (inexact->exact (ceiling (* logical-pixels (get-display-backing-scale)))))
 
 ; Utility for loading the compiler output.
 (define (get-shader-info-log shader)
@@ -95,7 +108,7 @@
     (define quality 5)
 
     ; Rendering "step limit," used by the spheretracer to control complexity.
-    (define step-limit 128)
+    (define step-limit 200)
 
     ; List of modes that are suitable for the current display.
     (define modes '(shaded complexity distance))
@@ -118,10 +131,10 @@
     (define (generate-compile-and-link)
       ; Clean up leftovers from last pass.
       (when current-program
-        (printf "Marking program ~a for deletion.~n" current-program)
+        #;(printf "Marking program ~a for deletion.~n" current-program)
         (glDeleteProgram current-program))
       (when current-shader
-        (printf "Marking shader ~a for deletion.~n" current-shader)
+        #;(printf "Marking shader ~a for deletion.~n" current-shader)
         (glDeleteShader current-shader))
 
       (let*-values ([(source lengths) (combine-sources design-node)]
@@ -135,7 +148,7 @@
           (begin
             (glAttachShader program shader)
             (glLinkProgram program)
-            (printf "Shader program ~a compiled and linked.~n" program)
+            #;(printf "Shader program ~a compiled and linked.~n" program)
             (update-colors-texture design-node)
             (set! current-program program)
             (set! current-shader shader))
@@ -173,7 +186,7 @@
     (define (update-colors-texture node)
       (for ([i (in-range (* 512 512 3))])
         (bytes-set! colors-buffer i #xAA))
-      (printf "Collecting node colors for texture...~n")
+      #;(printf "Collecting node colors for texture...~n")
       (collect-node-colors
         node
         (lambda (nid color)
@@ -196,7 +209,7 @@
                     GL_RGB
                     512 512 0 GL_RGB GL_UNSIGNED_BYTE
                     colors-buffer)
-      (printf "Texture updated.~n"))
+      #;(printf "Texture updated.~n"))
 
     ; Simple traversal routine that calls 'out-fn' with each 'node-id' and
     ; 'node-color' for any child of 'node' that has them defined.
@@ -210,21 +223,21 @@
     ; Configure the GL viewport on size changes.
     (define/override (on-size width height)
       (with-gl-context
-       (lambda ()
-         (glViewport 0 0 width height)
-         (glMatrixMode GL_PROJECTION)
-         (glLoadIdentity)
-         (glOrtho 0 width 0 height -10.0 10.0)
-         (glMatrixMode GL_MODELVIEW)
-         (glLoadIdentity)
-         (glTranslated 0.0 0.0 -10.0)
-         ))
+        (lambda ()
+          (glViewport 0 0 (dpi width) (dpi height))
+          (glMatrixMode GL_PROJECTION)
+          (glLoadIdentity)
+          (glOrtho 0 width 0 height -10.0 10.0)
+          (glMatrixMode GL_MODELVIEW)
+          (glLoadIdentity)
+          (glTranslated 0.0 0.0 -10.0)
+          ))
       )
 
     ; Draw the scene.
     (define/augment (on-paint)
-      (let ([width (send this get-width)]
-            [height (send this get-height)]
+      (let ([width (dpi (send this get-width))]
+            [height (dpi (send this get-height))]
             [mode (first remaining-modes)]
             [program current-program])
 
@@ -310,25 +323,25 @@
 
     (define/augment (on-char event)
       (case (send event get-key-code)
-        [(#\+) (set! zoom (* zoom 4/3)) (low-priority-refresh)]
+        [(#\+ #\=) (set! zoom (* zoom 4/3)) (low-priority-refresh)]
         [(#\-) (set! zoom (/ zoom 4/3)) (low-priority-refresh)]
-        [(#\[)
+        #;[(#\[)
          (set! quality (max 1 (- quality 1)))
          (printf "quality now 1/~a~n" quality)
          (low-priority-refresh)]
-        [(#\])
+        #;[(#\])
          (set! quality (+ quality 1))
          (printf "quality now 1/~a~n" quality)
          (low-priority-refresh)]
-        [(#\{)
+        #;[(#\{)
          (set! step-limit (max 1 (- step-limit 1)))
          (printf "step-limit now ~a~n" step-limit)
          (low-priority-refresh)]
-        [(#\})
+        #;[(#\})
          (set! step-limit (+ step-limit 1))
          (printf "step-limit now ~a~n" step-limit)
          (low-priority-refresh)]
-        [(#\ )
+        #;[(#\ )
          (set! remaining-modes (rest remaining-modes))
          (when (empty? remaining-modes)
            (set! remaining-modes modes))
@@ -336,14 +349,17 @@
          (low-priority-refresh)]
         [(#\z)
          (set! orientation (quat-identity-rotation))
+         (set! zoom 1)
          (low-priority-refresh)]
         [(#\x)
          (set! orientation
-           (quat-rotation-from-to (vec3 1 0 0) (vec3 0 0 1)))
+               (quat-rotation-from-to (vec3 1 0 0) (vec3 0 0 1)))
+         (set! zoom 1)
          (low-priority-refresh)]
         [(#\y)
          (set! orientation
-           (quat-rotation-from-to (vec3 0 1 0) (vec3 0 0 1)))
+               (quat-rotation-from-to (vec3 0 1 0) (vec3 0 0 1)))
+         (set! zoom 1)
          (low-priority-refresh)]
         [(wheel-up) (set! zoom (* zoom 9/8)) (low-priority-refresh)]
         [(wheel-down) (set! zoom (/ zoom 9/8)) (low-priority-refresh)]))
@@ -362,3 +378,29 @@
     (if (<= op-sqr 1)
       (struct-copy vec3 p [z (sqrt (1 . - . op-sqr))])
       (vec3-normalize p))))
+
+(define spheretrace-viewer-view%
+  (class* object% (view<%>)
+    (init-field @design-thunk)
+    (super-new)
+
+    (define/public (dependencies)
+      (list @design-thunk))
+
+    (define/public (create parent)
+      (new spheretrace-viewer%
+           [style '(gl no-autoclear)]
+           [parent parent]
+           [design-thunk (obs-peek @design-thunk)]))
+
+    (define/public (update v what val)
+      (case/dep what
+                [@design-thunk (set-field! design-thunk v val)
+                              (send v reload)]))
+
+    (define/public (destroy v)
+      (void))))
+
+(define (spheretrace-viewer @design-thunk)
+  (new spheretrace-viewer-view%
+       [@design-thunk (->obs @design-thunk)]))
