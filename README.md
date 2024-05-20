@@ -16,7 +16,7 @@ This is an interactive fiction made for [Spring Lisp Game Jam 2024](https://itch
 
 Set `debug-mode` to `#t` in `racket sludge-game/main.rkt` and re-run to activate debugging menus.
 
-## License and acknowledgements
+## License, acknowledgements, folder structure
 
 This repository is cloned from [Ruckus](https://github.com/cbiffle/ruckus). Ruckus is a language for describing solid 2D and 3D objects, and includes a renderer. I have modified this repo to add the rest of the game, including the models, text, structures, and logic associated with the game. I have also modified Ruckus to integrate it with the rest of the game and to fix some bugs.
 
