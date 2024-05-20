@@ -1,8 +1,8 @@
 #lang info
-(define name "Ruckus")
+(define name "Sludge Ruckus")
 (define version "0.1")
 (define collection "ruckus")
-(define deps '("base" "gui-lib" "math-lib" "opengl"))
+(define deps '("base" "gui-lib" "math-lib" "opengl" "gui-easy-lib" "opengl" "struct-plus-plus"))
 
 (define build-deps '("racket-doc"))
 

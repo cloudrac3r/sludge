@@ -1,3 +1,9 @@
 .*.swp
 .swp
 compiled/
+*~
+.#*
+\#*#
+doc
+sludge-dist*
+*.exe

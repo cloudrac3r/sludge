@@ -1,4 +1,5 @@
-The contents of this repository are, except where marked otherwise:
+The contents of this repository are, except for the sludge-game folder
+and except where marked otherwise:
 
    Copyright 2016 Cliff L. Biffle.
 
