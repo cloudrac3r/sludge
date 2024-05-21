@@ -69,10 +69,31 @@
 
 ;; --- CUTSCENES -------------------------------------------------------------------------------------
 
+(define/obs @interaction #f)
+
 (define (execute-cutscene id)
   (define cutscene (hash-ref world id))
-  (for ([i (in-producer ((cutscene-def cutscene)) (void))])
-    (add-to-log i)))
+  (define next ((cutscene-def cutscene)))
+  (let loop ()
+    (define i (next))
+    (when
+        (match i
+          [(? void?)
+           #f #| break out of cutscene |#]
+
+          [(? string?)
+           (add-to-log i)]
+
+          [(list (? (curryr is-a? view<%>) view) (? semaphore? sem))
+           (:= @interaction view)
+           (thread (λ () (semaphore-wait sem) (loop)))
+           #f #| only continue cutscene in thread |#]
+
+          [else
+           (error 'execute-cutscene "cutscene ~v produced a value ~v which did not match any patterns" id i)])
+
+      (:= @interaction #f)
+      (loop))))
 
 ;; --- LOG -------------------------------------------------------------------------------------------
 
@@ -87,7 +108,7 @@
 (define (clear)
   (:= @input ""))
 
-(define/obs @autocomplete '("one" "two"))
+(define/obs @autocomplete '("one" "two" "three"))
 (define @matching-autocomplete
   (@> (for/list ([ac @autocomplete]
                  #:when (string-prefix? ac @input))
@@ -106,9 +127,13 @@
 
     [(list "go" dest)
      (define dest-sym (string->symbol (format "room:~a" dest)))
-     (if (memq (room-go room) dest-sym)
-         (execute-room dest-sym)
-         (add-to-log "Sorry, I don't know where that is."))]
+     (cond
+       [(eq? dest-sym (room-id room))
+        (add-to-log "You're already there.")]
+       [(memq dest-sym (room-go room))
+        (execute-room dest-sym)]
+       [else
+        (add-to-log "Sorry, I don't know where that is.")])]
 
     [(list "look")
      (for ([id (room-description room)])
@@ -116,7 +141,7 @@
 
     [(list "look" thing)
      (define thing-sym (string->symbol (format "cutscene:~a" thing)))
-     (if (memq (room-look room) thing-sym)
+     (if (memq thing-sym (room-look room))
          (execute-cutscene thing-sym)
          (add-to-log "Sorry, I don't know what that is."))]
 
@@ -174,21 +199,31 @@
                         (λ _ (interactive-set-flag k))))))))
        (hpanel-))
    (hpanel
-    (vpanel
-     #:min-size (@> (list (truncate (* @width 1/3)) #f))
-     (spheretrace-viewer
-      @design-thunk)
-     (text "Drag to rotate, scroll to zoom, Z to reset."))
+    (when-design
+     (vpanel
+      #:min-size (@> (list (truncate (* @width 1/3)) #f))
+      (spheretrace-viewer
+       @design-thunk)
+      (text "Drag to rotate, scroll to zoom, Z to reset."))
+     (else (vpanel*)))
     (vpanel
      (editor-canvas log)
-     (input #:label "Your next move: " @input
-            (λ (action text)
-              (:= @input text)
-              (when (eq? action 'return)
-                (process-input text))))
-     (hpanel-
-      (list-view
-       @matching-autocomplete
-       #:style '(horizontal hide-hscroll)
-       (λ (k _)
-         (text k)))))))))
+     (vpanel-
+      (observable-view
+       @interaction
+       (λ (view)
+         (or view
+             (vpanel
+              (hpanel-
+               (input #:label "Your next move: " @input
+                      (λ (action text)
+                        (:= @input text)
+                        (when (eq? action 'return)
+                          (process-input text)))))
+              (hpanel-
+               (list-view
+                @matching-autocomplete
+                #:style '(horizontal)
+                (λ (k _)
+                  (text k)))
+               (text ""))))))))))))

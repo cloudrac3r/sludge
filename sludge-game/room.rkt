@@ -24,7 +24,12 @@
 
 
 (define-cutscene (bedroom-description)
-  (yield "The bedroom is in its usual untidy state."))
+  (yield "The bedroom is in its usual untidy state.")
+  (define sem (make-semaphore))
+  (yield (list
+          (button "Continue..." (λ () (semaphore-post sem)))
+          sem))
+  (yield "I should go and see if any companies have responded to my job application yet."))
 
 
 
@@ -58,7 +63,7 @@
 (define-cutscene (closet)
   (yield
    (case (get-flag 'closet:taken)
-     [(nothing) "The bedroom light has never been able to illuminate the depths of the closet. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, two quite presentable outfits hanging on the rail stick out to you. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
+     [(nothing) "The bedroom light has never quite been able to illuminate the depths of the closet. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, you can spot two fairly presentable outfits hanging on the rail. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
      [(suit) "The Sludge Co t-shirt looks mockingly at you from the end of the rail. You try to push it out of your mind."]
      [(merch) "The suit remains on the rail dispassionately."])))
 
