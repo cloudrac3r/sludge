@@ -75,6 +75,7 @@
   (define cutscene (hash-ref world id))
   (define next ((cutscene-def cutscene)))
   (let loop ()
+    (:= @interaction #f)
     (define i (next))
     (when
         (match i
@@ -92,7 +93,6 @@
           [else
            (error 'execute-cutscene "cutscene ~v produced a value ~v which did not match any patterns" id i)])
 
-      (:= @interaction #f)
       (loop))))
 
 ;; --- LOG -------------------------------------------------------------------------------------------
@@ -115,6 +115,11 @@
         ac)))
 
 ;; --- GAME LOOP -------------------------------------------------------------------------------------
+
+(define (execute sym)
+  (if (room? (hash-ref world sym))
+      (execute-room sym)
+      (execute-cutscene sym)))
 
 (define (process-input text)
   (add-to-log "")
@@ -144,6 +149,10 @@
      (if (memq thing-sym (room-look room))
          (execute-cutscene thing-sym)
          (add-to-log "Sorry, I don't know what that is."))]
+
+    [(? (curry hash-has-key? (room-commands room)))
+     (define dest (hash-ref (room-commands room) words))
+     (execute dest)]
 
     [(list verb _ ...)
      (add-to-log (format "Sorry, I don't know what '~a' means." verb))])

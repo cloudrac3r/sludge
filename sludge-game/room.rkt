@@ -24,12 +24,7 @@
 
 
 (define-cutscene (bedroom-description)
-  (yield "The bedroom is in its usual untidy state.")
-  (define sem (make-semaphore))
-  (yield (list
-          (button "Continue..." (λ () (semaphore-post sem)))
-          sem))
-  (yield "I should go and see if any companies have responded to my job application yet."))
+  (yield "The bedroom is in its usual untidy state."))
 
 
 
@@ -44,9 +39,8 @@
   #:re-entry-cutscene '(cutscene:closet-re-entry)
   #:go '(room:bedroom)
   #:look '(cutscene:suit cutscene:sludge-merch)
-  #:commands
-  (list (command "wear" "suit" 'cutscene:wear-suit)
-        (command "wear" "sludge merch" 'cutscene:wear-sludge-merch)))
+  #:commands (hash '("wear" "suit") 'cutscene:wear-suit
+                   '("wear" "sludge merch") 'cutscene:wear-sludge-merch))
 
 
 

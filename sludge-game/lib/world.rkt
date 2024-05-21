@@ -22,9 +22,8 @@
                 [(re-entry-cutscene null) list?]
                 [(go null) list?]
                 [(look null) list?]
-                [(commands null) list?])
+                [(commands (hash)) hash?])
           #:transparent)
-(struct++ command (name object action) #:transparent)
 (struct++ cutscene (id def) #:transparent)
 
 (define-syntax (define-room stx)
