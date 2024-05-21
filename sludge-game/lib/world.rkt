@@ -15,7 +15,15 @@
 
 (define world (make-hasheq))
 
-(struct++ room (id name entry-cutscene re-entry-cutscene go look commands) #:transparent)
+(struct++ room ([id symbol?]
+                [name string?]
+                [(entry-cutscene null) list?]
+                [(description null) list?]
+                [(re-entry-cutscene null) list?]
+                [(go null) list?]
+                [(look null) list?]
+                [(commands null) list?])
+          #:transparent)
 (struct++ command (name object action) #:transparent)
 (struct++ cutscene (id def) #:transparent)
 

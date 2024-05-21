@@ -35,23 +35,26 @@
 ;; --- ROOMS -----------------------------------------------------------------------------------------
 
 (define/obs @visited (set))
-(define/obs @current-room 'room:bedroom)
+(define/obs @current-room-id 'room:bedroom)
+(define @current-room
+  (@current-room-id . ~> . (λ (id) (hash-ref world id))))
 
 (define (execute-room id)
-  (:= @current-room id)
-  (define room (hash-ref world id))
+  (:= @current-room-id id)
+  (define room (obs-peek @current-room))
   (if (set-member? (obs-peek @visited) id)
-      (execute-cutscene (room-re-entry-cutscene room))
-      (execute-cutscene (room-entry-cutscene room)))
+      (for ([id (room-re-entry-cutscene room)])
+        (execute-cutscene id))
+      (for ([id (append (room-entry-cutscene room) (room-description room))])
+        (execute-cutscene id)))
   (@visited . <~ . (λ (visited) (set-add visited id))))
 
 ;; --- CUTSCENES -------------------------------------------------------------------------------------
 
 (define (execute-cutscene id)
-  (when id
-    (define cutscene (hash-ref world id))
-    (for ([i (in-producer ((cutscene-def cutscene)) (void))])
-      (add-to-log i))))
+  (define cutscene (hash-ref world id))
+  (for ([i (in-producer ((cutscene-def cutscene)) (void))])
+    (add-to-log i)))
 
 ;; --- LOG -------------------------------------------------------------------------------------------
 
@@ -66,22 +69,45 @@
 (define (clear)
   (:= @input ""))
 
+(define/obs @autocomplete '("one" "two"))
+(define @matching-autocomplete
+  (@> (for/list ([ac @autocomplete]
+                 #:when (string-prefix? ac @input))
+        ac)))
+
 ;; --- GAME LOOP -------------------------------------------------------------------------------------
 
 (define (process-input text)
   (add-to-log "")
   (add-to-log (format ">~a" text))
   (define words (string-split text))
+  (define room (obs-peek @current-room))
   (match words
     [(list "go")
      (add-to-log "Where do you want to go?")]
+
     [(list "go" dest)
-     (execute-room (string->symbol dest))]
-    [_
-     (add-to-log "Sorry, I don't know what that means.")])
+     (define dest-sym (string->symbol (format "room:~a" dest)))
+     (if (memq (room-go room) dest-sym)
+         (execute-room dest-sym)
+         (add-to-log "Sorry, I don't know where that is."))]
+
+    [(list "look")
+     (for ([id (room-description room)])
+       (execute-cutscene id))]
+
+    [(list "look" thing)
+     (define thing-sym (string->symbol (format "cutscene:~a" thing)))
+     (if (memq (room-look room) thing-sym)
+         (execute-cutscene thing-sym)
+         (add-to-log "Sorry, I don't know what that is."))]
+
+    [(list verb _ ...)
+     (add-to-log (format "Sorry, I don't know what '~a' means." verb))])
+
   (clear))
 
-(void (execute-room (obs-peek @current-room)))
+(void (execute-room (obs-peek @current-room-id)))
 
 ;; --- INTERFACE -------------------------------------------------------------------------------------
 
@@ -103,7 +129,7 @@
                (for/list ([(id room) (in-hash world)]
                           #:when (room? room))
                  (checkable-menu-item (room-name room) (λ _ (execute-room id))
-                                      #:checked? (@> (eq? id @current-room)))))
+                                      #:checked? (@> (eq? id @current-room-id)))))
         (apply menu "Cutscene"
                (for/list ([(id cutscene) (in-hash world)]
                           #:when (cutscene? cutscene))
@@ -136,5 +162,12 @@
      (editor-canvas log)
      (input #:label "Your next move: " @input
             (λ (action text)
+              (:= @input text)
               (when (eq? action 'return)
-                (process-input text)))))))))
+                (process-input text))))
+     (hpanel-
+      (list-view
+       @matching-autocomplete
+       #:style '(horizontal hide-hscroll)
+       (λ (k _)
+         (text k)))))))))
