@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse))
 
 (define debug-mode #t)
-(define-for-syntax enable-designs #f)
+(define-for-syntax enable-designs #t)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
 ;; | Copyright 2024 Cadence Ember    |
@@ -53,7 +53,6 @@
 ;; --- ROOMS -----------------------------------------------------------------------------------------
 
 (define/obs @visited (set))
-(define/obs @current-room-id 'room:bedroom)
 (define @current-room
   (@current-room-id . ~> . (λ (id) (hash-ref world id))))
 
@@ -90,6 +89,10 @@
            (thread (λ () (semaphore-wait sem) (loop)))
            #f #| only continue cutscene in thread |#]
 
+          [(list "go" dest-sym)
+           (execute-room (:= @current-room-id dest-sym))
+           #f #| switch to the cutscene of the new room |#]
+
           [else
            (error 'execute-cutscene "cutscene ~v produced a value ~v which did not match any patterns" id i)])
 
@@ -116,31 +119,44 @@
 
 ;; --- GAME LOOP -------------------------------------------------------------------------------------
 
-(define (execute sym)
-  (if (room? (hash-ref world sym))
-      (execute-room sym)
-      (execute-cutscene sym)))
+(define (execute sym-or-obj)
+  (define obj
+    (if (symbol? sym-or-obj)
+        (hash-ref world sym-or-obj)
+        sym-or-obj))
+  (if (room? obj)
+      (execute-room (room-cutscene-id obj))
+      (execute-cutscene (room-cutscene-id obj))))
 
 (define (process-input text)
   (add-to-log "")
   (add-to-log (format ">~a" text))
-  (define words (string-split text))
+  (define words (cdr (regexp-match #rx"([^ ]*) ?(.*)" text)))
   (define room (obs-peek @current-room))
   (match words
-    [(list "go")
-     (add-to-log "Where do you want to go?")]
+    [(list "go" "")
+     (add-to-log (format "Where do you want to go? (Possibilities: ~a)"
+                         (string-join
+                          (for/list ([r-sym (room-go room)])
+                                            (define obj (hash-ref world r-sym))
+                                            (room-cutscene-name obj))
+                          ", ")))]
 
     [(list "go" dest)
-     (define dest-sym (string->symbol (format "room:~a" dest)))
+     (define dest-obj
+       (for/first ([r-id (append (room-go room) (list (obs-peek @current-room-id)))]
+                   #:do [(define r (hash-ref world r-id))]
+                   #:when (equal? dest (room-cutscene-name r)))
+         r))
      (cond
-       [(eq? dest-sym (room-id room))
+       [(eq? dest-obj room)
         (add-to-log "You're already there.")]
-       [(memq dest-sym (room-go room))
-        (execute-room dest-sym)]
+       [dest-obj
+        (execute dest-obj)]
        [else
         (add-to-log "Sorry, I don't know where that is.")])]
 
-    [(list "look")
+    [(list "look" "")
      (for ([id (room-description room)])
        (execute-cutscene id))]
 

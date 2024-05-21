@@ -14,12 +14,30 @@
          "lib/world.rkt")
 (provide (all-defined-out))
 
+(define/obs @current-room-id 'room:bedroom)
+
 
 
 (define-room bedroom
   #:description '(cutscene:bedroom-description)
   #:re-entry-cutscene '(cutscene:bedroom-re-entry)
-  #:go '(room:closet))
+  #:go '(room:closet cutscene:front-door))
+
+
+
+(define-cutscene (front-door)
+  (case (get-flag 'closet:taken)
+    [(nothing) (yield "You can't leave until you've gotten dressed.")]
+    [else (yield (list "go" 'room:work))]))
+
+
+(define-room work
+  #:description '(cutscene:work-description))
+
+
+
+(define-cutscene (work-description)
+  (yield "Welcome to work."))
 
 
 
