@@ -1,6 +1,8 @@
 #lang racket/base
+(require (for-syntax racket/base syntax/parse))
 
 (define debug-mode #t)
+(define-for-syntax enable-designs #f)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
 ;; | Copyright 2024 Cadence Ember    |
@@ -8,29 +10,45 @@
 ;; | for copying & reuse conditions. |
 ;; \_________________________________/
 
-(require "lib/wayland.rkt")
+(define-syntax (when-design stx)
+  (syntax-parse stx
+    [(_ body (else e))
+     (if enable-designs
+         #'body
+         #'e)]
+    [(_ body)
+     #'(when-design body (else (begin)))]
+    [(_ body ...)
+     #'(begin (when-design body) ...)]))
+
+(when-design
+ (require "lib/wayland.rkt"))
 
 (require racket/class
          racket/contract
          racket/format
+         racket/function
          racket/match
          racket/set
          racket/string
          (prefix-in gui: racket/gui)
          racket/gui/easy
          racket/gui/easy/operator
-         "../viz/spheretrace-viewer.rkt"
          "lib/at-map.rkt"
          "lib/flags.rkt"
          "lib/world.rkt"
          "lib/log.rkt"
-         (prefix-in design: "design/all.rkt")
          "room.rkt")
+
+(when-design
+ (require (prefix-in design: "design/all.rkt")
+          "../viz/spheretrace-viewer.rkt"))
 
 ;; --- MODELS ----------------------------------------------------------------------------------------
 
-(define models (hash->list design:all #t))
-(define/obs @design-thunk (cdr (car models)))
+(when-design
+ (define models (hash->list design:all #t))
+ (define/obs @design-thunk (cdr (car models))))
 
 ;; --- ROOMS -----------------------------------------------------------------------------------------
 
@@ -134,9 +152,12 @@
                (for/list ([(id cutscene) (in-hash world)]
                           #:when (cutscene? cutscene))
                  (menu-item (~a id) (λ _ (execute-cutscene id)))))
-        (apply menu "Model"
-               (for/list ([model models])
-                 (menu-item (~a (car model)) (λ _ (:= @design-thunk (cdr model))))))
+        (when-design
+         (apply menu "Model"
+                (for/list ([model models])
+                  (menu-item (~a (car model)) (λ _ (:= @design-thunk (cdr model))))))
+         (else (menu "Model"
+                     (menu-item #:enabled? #f "<models not loaded>"))))
         (apply menu "Flags"
                (let ([flags (obs-peek @flags)])
                  (for/list ([k (hash-keys (obs-peek @flags) #t)])

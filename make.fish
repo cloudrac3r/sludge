@@ -20,6 +20,11 @@ function do
     or exit
 end
 
+if not grep -q -E 'enable-designs.*t' sludge-game/main.rkt
+    echo "You must enable designs for release builds. Set `enable-designs #t'."
+    exit 1
+end
+
 if contains unix $argv
     echo 'Making unix...'
     ~/.racket-bc/bin/raco pkg install --auto req-lib
