@@ -21,8 +21,6 @@
                 [(entry-cutscene null) list?]
                 [(description null) list?]
                 [(re-entry-cutscene null) list?]
-                [(go null) list?]
-                [(look null) list?]
                 [(commands (hash)) hash?])
           #:transparent)
 (struct++ cutscene (id name def) #:transparent)

@@ -9,12 +9,17 @@
 ;; \o_|____________________________________________________________o_/
 
 
-(difference
- (union
-  (difference
-   (cube 200)
-   (sphere 120))
-  (difference
-   (cube 200)
-   (half-space '[0 1 0] 72)))
- (half-space '[0 1 0] 0))
+(iso -5
+     (difference
+      (union
+       (difference
+        (scale '[0.7 1 1.02]
+               (sphere 147))
+        (half-space '[0 1 0] 0))
+       (capsule 100 100))
+      (at '[100 150 0]
+          (scale '[0.5 1 1]
+                 (sphere 175)))
+      (at '[-100 150 0]
+          (scale '[0.5 1 1]
+                 (sphere 175)))))

@@ -106,16 +106,35 @@
     (printf "adding to log: ~v~n" s))
   (send log add (make-object gui:string-snip% s)))
 
+(define (split-command str)
+  (cdr (regexp-match #rx"([^ ]*) ?(.*)" str)))
+
 (define/obs @input "")
+(define @input-verb (@> (car (split-command @input))))
+(define @input-object (@> (cadr (split-command @input))))
 
 (define (clear)
   (:= @input ""))
 
-(define/obs @autocomplete '("one" "two" "three"))
-(define @matching-autocomplete
-  (@> (for/list ([ac @autocomplete]
-                 #:when (string-prefix? ac @input))
-        ac)))
+(define @autocomplete-verb
+  (@> (for/set ([command (in-list (append '(("look") ("go")) ; always suggest completing these verbs
+                                          (hash-keys (room-commands @current-room))))])
+        (car command))))
+
+(define @autocomplete-object
+  (@> (for/list ([command (in-list (hash-keys (room-commands @current-room)))]
+                 #:when (and (equal? (car command) @input-verb)            ; verb equals input
+                             ((length command) . >= . 2)                   ; command has an object
+                             (string-prefix? (cadr command) @input-object) ; object matches input
+                             ))
+        (cadr command))))
+
+(define @autocomplete
+  (@> (if (pair? @autocomplete-object) ; if user has typed a complete verb and verb has objects
+          @autocomplete-object         ; then suggest from those objects
+          (for/list ([verb (in-set @autocomplete-verb)]        ; otherwise
+                     #:when (string-prefix? verb @input-verb)) ; suggest verbs
+            verb))))
 
 ;; --- GAME LOOP -------------------------------------------------------------------------------------
 
@@ -131,40 +150,16 @@
 (define (process-input text)
   (add-to-log "")
   (add-to-log (format ">~a" text))
-  (define words (cdr (regexp-match #rx"([^ ]*) ?(.*)" text)))
+  (define words (split-command text))
   (define room (obs-peek @current-room))
   (match words
     [(list "go" "")
      (add-to-log (format "Where do you want to go? (Possibilities: ~a)"
-                         (string-join
-                          (for/list ([r-sym (room-go room)])
-                                            (define obj (hash-ref world r-sym))
-                                            (room-cutscene-name obj))
-                          ", ")))]
-
-    [(list "go" dest)
-     (define dest-obj
-       (for/first ([r-id (append (room-go room) (list (obs-peek @current-room-id)))]
-                   #:do [(define r (hash-ref world r-id))]
-                   #:when (equal? dest (room-cutscene-name r)))
-         r))
-     (cond
-       [(eq? dest-obj room)
-        (add-to-log "You're already there.")]
-       [dest-obj
-        (execute dest-obj)]
-       [else
-        (add-to-log "Sorry, I don't know where that is.")])]
+                         (string-join (obs-peek @autocomplete-object) ", ")))]
 
     [(list "look" "")
      (for ([id (room-description room)])
        (execute-cutscene id))]
-
-    [(list "look" thing)
-     (define thing-sym (string->symbol (format "cutscene:~a" thing)))
-     (if (memq thing-sym (room-look room))
-         (execute-cutscene thing-sym)
-         (add-to-log "Sorry, I don't know what that is."))]
 
     [(? (curry hash-has-key? (room-commands room)))
      (define dest (hash-ref (room-commands room) words))
@@ -247,7 +242,7 @@
                           (process-input text)))))
               (hpanel-
                (list-view
-                @matching-autocomplete
+                @autocomplete
                 #:style '(horizontal)
                 (λ (k _)
                   (text k)))

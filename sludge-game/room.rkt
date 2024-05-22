@@ -21,7 +21,8 @@
 (define-room bedroom
   #:description '(cutscene:bedroom-description)
   #:re-entry-cutscene '(cutscene:bedroom-re-entry)
-  #:go '(room:closet cutscene:front-door))
+  #:commands (hash '("go" "closet") 'room:closet
+                   '("go" "front door") 'cutscene:front-door))
 
 
 
@@ -55,9 +56,10 @@
   #:entry-cutscene '(cutscene:closet-entry)
   #:description '(cutscene:closet)
   #:re-entry-cutscene '(cutscene:closet-re-entry)
-  #:go '(room:bedroom)
-  #:look '(cutscene:suit cutscene:sludge-merch)
-  #:commands (hash '("wear" "suit") 'cutscene:wear-suit
+  #:commands (hash '("go" "bedroom") 'room:bedroom
+                   '("look" "suit") 'cutscene:suit
+                   '("look" "sludge merch") 'cutscene:sludge-merch
+                   '("wear" "suit") 'cutscene:wear-suit
                    '("wear" "sludge merch") 'cutscene:wear-sludge-merch))
 
 
@@ -78,6 +80,16 @@
      [(nothing) "The bedroom light has never quite been able to illuminate the depths of the closet. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, you can spot two fairly presentable outfits hanging on the rail. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
      [(suit) "The Sludge Co t-shirt looks mockingly at you from the end of the rail. You try to push it out of your mind."]
      [(merch) "The suit remains on the rail dispassionately."])))
+
+
+
+(define-cutscene (suit)
+  (yield "It's a blue suit that you neatly ironed months ago when the world seemed to hold more hope and time. The neighbouring clothes hanger holds a dress shirt, and matching trousers are dangling over the rail."))
+
+
+
+(define-cutscene (sludge-merch)
+  (yield "It is indescribable."))
 
 
 

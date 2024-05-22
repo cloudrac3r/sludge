@@ -31,4 +31,4 @@
     [_
      #'(void)]))
 
-(design table cube)
+(design table cube rhombic-gomboc)
