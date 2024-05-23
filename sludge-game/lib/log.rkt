@@ -13,11 +13,11 @@
          racket/gui/easy
          racket/gui/easy/operator)
 
-(provide editor-canvas log-text%)
+(provide editor-canvas log-text% log-input%)
 
 (define editor-canvas%
   (class* object% (view<%>)
-    (init-field @editor)
+    (init-field @editor editable?)
     (super-new)
 
     (define/public (dependencies)
@@ -27,7 +27,7 @@
       (new gui:editor-canvas%
            [parent parent]
            [editor (obs-peek @editor)]
-           [style '(no-hscroll no-focus)]))
+           [style (if editable? '(no-hscroll) '(no-hscroll no-focus))]))
 
     (define/public (update v what val)
       (case/dep what
@@ -37,8 +37,10 @@
     (define/public (destroy v)
       (void))))
 
-(define (editor-canvas @editor)
-  (new editor-canvas% [@editor (->obs @editor)]))
+(define (editor-canvas @editor editable?)
+  (new editor-canvas%
+       [@editor (->obs @editor)]
+       [editable? editable?]))
 
 (define log-text%
   (class gui:text%
@@ -49,3 +51,12 @@
     (define/public (add snip)
       (send this insert "\n" (send this last-position) 'same)
       (send this insert snip (send this last-position) 'same))))
+
+(define log-input%
+  (class gui:text%
+    (inherit last-position)
+    (define/augment (can-insert? s l) (= s (last-position)))
+    (define/augment (can-delete? s l) (= (+ s l) (last-position)))
+    (define/override (on-default-char ev)
+      (println (send ev get-key-code)))
+    (super-new)))

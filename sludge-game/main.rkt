@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse))
 
 (define debug-mode #t)
-(define-for-syntax enable-designs #t)
+(define-for-syntax enable-designs #f)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
 ;; | Copyright 2024 Cadence Ember    |
@@ -105,6 +105,8 @@
   (when debug-mode
     (printf "adding to log: ~v~n" s))
   (send log add (make-object gui:string-snip% s)))
+
+(define log-input (new log-input%))
 
 (define (split-command str)
   (cdr (regexp-match #rx"([^ ]*) ?(.*)" str)))
@@ -227,7 +229,7 @@
       (text "Drag to rotate, scroll to zoom, Z to reset."))
      (else (vpanel*)))
     (vpanel
-     (editor-canvas log)
+     (editor-canvas log #f)
      (vpanel-
       (observable-view
        @interaction
@@ -235,11 +237,7 @@
          (or view
              (vpanel
               (hpanel-
-               (input #:label "Your next move: " @input
-                      (λ (action text)
-                        (:= @input text)
-                        (when (eq? action 'return)
-                          (process-input text)))))
+               (editor-canvas log-input #t))
               (hpanel-
                (list-view
                 @autocomplete
