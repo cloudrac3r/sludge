@@ -1,10 +1,15 @@
 #lang racket/base
 
-;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
-;; | Copyright 2024 Cadence Ember    |
-;; | See `sludge-game/LICENSE.txt`   |
-;; | for copying & reuse conditions. |
-;; \_________________________________/
+;; |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾:.
+;; | Copyright 2024 Cadence Ember        : '.
+;; | This file is licensed under the     :...:.
+;; | Creative Commons BY-NC license.          '|
+;; | That means you can distribute and adapt   |
+;; | this file for non-commercial purposes     |
+;; | only, in any medium, as long as you give  |
+;; | credit. See here for full license terms:  |
+;; http://creativecommons.org/licenses/by-nc/4.0
+;; |___________________________________________|
 
 
 (require racket/generator
