@@ -106,37 +106,105 @@
     (printf "adding to log: ~v~n" s))
   (send log add (make-object gui:string-snip% s)))
 
-(define log-input (new log-input%))
+(define/obs @input "")
+(define input-text (new input-text%
+                        [return-cb (λ (text) (process-input (string-trim text)))]
+                        [tab-cb (λ () (autocomplete-right))]
+                        [@input @input]))
+
+(define ac-editor (new autocomplete-text%))
+(define ac-editor-snip (new gui:editor-snip%
+                            [editor ac-editor]
+                            [with-border? #f]
+                            [top-margin 0]
+                            [right-margin 0]
+                            [bottom-margin 0]
+                            [left-margin 0]))
+(send input-text insert ">")
+(send input-text insert ac-editor-snip)
+
+(define sl (send ac-editor get-style-list))
+(define standard (send sl find-named-style "Standard"))
+(define ac-style (send sl new-named-style "Autocomplete" standard))
+(send ac-style set-delta
+      (send (make-object gui:style-delta%)
+            set-delta-foreground "blue"))
+(define ac-ul-style (send sl new-named-style "Autocomplete Underline" standard))
+(send ac-ul-style set-delta
+      (send (make-object gui:style-delta% 'change-toggle-underline)
+            set-delta-foreground "blue"))
+
+(send input-text apply-constraints)
 
 (define (split-command str)
-  (cdr (regexp-match #rx"([^ ]*) ?(.*)" str)))
+  (cdr (regexp-match #rx"([^ ]*) *(.*)" str)))
 
-(define/obs @input "")
 (define @input-verb (@> (car (split-command @input))))
 (define @input-object (@> (cadr (split-command @input))))
 
 (define (clear)
-  (:= @input ""))
+  (send input-text delete-input))
 
 (define @autocomplete-verb
   (@> (for/set ([command (in-list (append '(("look") ("go")) ; always suggest completing these verbs
-                                          (hash-keys (room-commands @current-room))))])
+                                          (hash-keys (room-commands @current-room) #t)))]
+                #:when (string-prefix? (car command) @input-verb))
         (car command))))
 
+(define @autocomplete-verb-trimmed
+  (@> (for/list ([str (in-set @autocomplete-verb)]
+                 [i (in-naturals)])
+        (if (= i 0)
+            (substring str (string-length (obs-peek @input-verb)))
+            str))))
+
 (define @autocomplete-object
-  (@> (for/list ([command (in-list (hash-keys (room-commands @current-room)))]
+  (@> (for/list ([command (in-list (hash-keys (room-commands @current-room) #t))]
                  #:when (and (equal? (car command) @input-verb)            ; verb equals input
                              ((length command) . >= . 2)                   ; command has an object
                              (string-prefix? (cadr command) @input-object) ; object matches input
                              ))
         (cadr command))))
 
+(define @autocomplete-object-trimmed
+  (@> (for/list ([str @autocomplete-object]
+                 [i (in-naturals)])
+        (if (= i 0)
+            (substring str (string-length (obs-peek @input-object)))
+            str))))
+
 (define @autocomplete
-  (@> (if (pair? @autocomplete-object) ; if user has typed a complete verb and verb has objects
-          @autocomplete-object         ; then suggest from those objects
-          (for/list ([verb (in-set @autocomplete-verb)]        ; otherwise
-                     #:when (string-prefix? verb @input-verb)) ; suggest verbs
-            verb))))
+  (@> (cond
+        [(pair? @autocomplete-object) (obs-peek @autocomplete-object-trimmed)]
+        [(not (string-contains? (obs-peek @input) " ")) (obs-peek @autocomplete-verb-trimmed)]
+        [else null])))
+
+(define (autocomplete-right)
+  (define input (obs-peek @input))
+  (define ac (obs-peek @autocomplete))
+  (when (pair? ac)
+    (define spacer (if (or (null? (obs-peek @autocomplete-object))
+                           (string-contains? input " ")) "" " "))
+    (send input-text insert-input (string-append spacer (car ac) " "))))
+
+(obs-observe! @autocomplete
+              (λ (v)
+                (define input (obs-peek @input))
+                (define spacer (if (or (null? (obs-peek @autocomplete-object))
+                                       (string-contains? input " ")) "" " "))
+                (send ac-editor begin-edit-sequence)
+                (send ac-editor erase)
+                (send ac-editor insert spacer)
+                (for ([s v]
+                      [i (in-naturals)])
+                  (define snip (make-object gui:string-snip% s))
+                  (send snip set-style ac-ul-style)
+                  (send ac-editor insert snip)
+                  (when (i . < . (sub1 (length v)))
+                    (define sep (make-object gui:string-snip% " | "))
+                    (send sep set-style ac-style)
+                    (send ac-editor insert sep)))
+                (send ac-editor end-edit-sequence)))
 
 ;; --- GAME LOOP -------------------------------------------------------------------------------------
 
@@ -154,7 +222,16 @@
   (add-to-log (format ">~a" text))
   (define words (split-command text))
   (define room (obs-peek @current-room))
+  (define valid-verbs (list->set (append '("look" "go")
+                                         (for/list ([k (hash-keys (room-commands room))])
+                                           (car k)))))
   (match words
+    [(list "" "")
+     (add-to-log "HOW TO PLAY THE GAME")
+     (add-to-log "Click the input box at the bottom. Write what you want to do, then press Return.")
+     (add-to-log "The blue text suggests your available actions. Press Tab to accept suggestion.")
+     (add-to-log "Feedback will appear in the top area.")]
+
     [(list "go" "")
      (add-to-log (format "Where do you want to go? (Possibilities: ~a)"
                          (string-join (obs-peek @autocomplete-object) ", ")))]
@@ -166,6 +243,9 @@
     [(? (curry hash-has-key? (room-commands room)))
      (define dest (hash-ref (room-commands room) words))
      (execute dest)]
+
+    [(list (? (curry set-member? valid-verbs)) object)
+     (add-to-log (format "Sorry, '~a' is not accessible from this room." object))]
 
     [(list verb _ ...)
      (add-to-log (format "Sorry, I don't know what '~a' means." verb))])
@@ -237,11 +317,4 @@
          (or view
              (vpanel
               (hpanel-
-               (editor-canvas log-input #t))
-              (hpanel-
-               (list-view
-                @autocomplete
-                #:style '(horizontal)
-                (λ (k _)
-                  (text k)))
-               (text ""))))))))))))
+               (editor-canvas input-text #t))))))))))))

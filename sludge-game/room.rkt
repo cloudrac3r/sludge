@@ -24,6 +24,7 @@
 
 
 (define-room bedroom
+  #:entry-cutscene '(cutscene:bedroom-entry)
   #:description '(cutscene:bedroom-description)
   #:re-entry-cutscene '(cutscene:bedroom-re-entry)
   #:commands (hash '("go" "closet") 'room:closet
@@ -47,8 +48,14 @@
 
 
 
+(define-cutscene (bedroom-entry)
+  (yield "6:00 AM. Your alarm is beeping.")
+  (yield "You begrudgingly turn it off and swing your legs out of bed, feet landing on the cold carpeted floor."))
+
+
+
 (define-cutscene (bedroom-description)
-  (yield "The bedroom is in its usual untidy state."))
+  (yield "Your bedroom is in its usual untidy state."))
 
 
 
@@ -82,7 +89,7 @@
 (define-cutscene (closet)
   (yield
    (case (get-flag 'closet:taken)
-     [(nothing) "The bedroom light has never quite been able to illuminate the depths of the closet. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, you can spot two fairly presentable outfits hanging on the rail. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
+     [(nothing) "The bedroom light has never quite been able to illuminate its depths. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, you can spot two fairly presentable outfits hanging on the rail. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
      [(suit) "The Sludge Co t-shirt looks mockingly at you from the end of the rail. You try to push it out of your mind."]
      [(merch) "The suit remains on the rail dispassionately."])))
 
