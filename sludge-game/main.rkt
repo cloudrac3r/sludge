@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse))
 
 (define debug-mode #t)
-(define-for-syntax enable-designs #f)
+(define-for-syntax enable-designs #t)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
 ;; | Copyright 2024 Cadence Ember    |
@@ -100,9 +100,11 @@
 
 ;; --- LOG -------------------------------------------------------------------------------------------
 
+(define @debug-mode (obs debug-mode))
+
 (define log (new log-text%))
 (define (add-to-log s)
-  (when debug-mode
+  (when (obs-peek @debug-mode)
     (printf "adding to log: ~v~n" s))
   (send log add (make-object gui:string-snip% s)))
 
@@ -236,6 +238,10 @@
      (add-to-log "The blue text suggests your available actions. Press Tab to accept suggestion.")
      (add-to-log "Feedback will appear in the top area.")]
 
+    [(list "debug" "")
+     (@debug-mode . <~ . not)
+     (add-to-log (format "Debug menus are now ~a." (if (obs-peek @debug-mode) "ENABLED" "DISABLED")))]
+
     [(list "go" "")
      (add-to-log (format "Where do you want to go? (Possibilities: ~a)"
                          (string-join (obs-peek @autocomplete-object) ", ")))]
@@ -262,7 +268,7 @@
 
 (define/obs @width 1000)
 
-(void
+(define (make-window)
  (render
   (window
    #:size (list (obs-peek @width) 600)
@@ -272,7 +278,7 @@
                (super-new)
                (define/override (on-size width height)
                  (:= @width width))))
-   (if debug-mode
+   (if (obs-peek @debug-mode)
        (menu-bar
         (apply menu "Room"
                (for/list ([(id room) (in-hash world)]
@@ -323,3 +329,8 @@
               (hpanel-
                #:min-size '(#f 30)
                (editor-canvas input-text #t))))))))))))
+
+(define r (make-window))
+(obs-observe! @debug-mode (λ _
+                            (renderer-destroy r)
+                            (set! r (make-window))))
