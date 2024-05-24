@@ -12,9 +12,9 @@
 (provide (all-defined-out))
 
 (define/obs @flags
-  (hasheq 'a #f
-          'b #t
-          'closet:taken 'nothing))
+  (hasheq 'closet:taken 'nothing
+          'water 'kitchen
+          'has-interview #f))
 
 (define (toggle-flag k)
   (@flags . <~ . (λ (flags) (hash-update flags k (λ (v) (not v))))))

@@ -62,8 +62,9 @@ window
   (class gui:text%
     (super-new)
     (send this auto-wrap #t)
-    (send this insert "SLUDGE FICTION\nAN INTERACTIVE STORY\nWHERE YOUR CHOICES DON'T MATTER")
-    (send this insert "\n")
+    (define/public (show-intro)
+      (send this insert "SLUDGE FICTION\nAN INTERACTIVE STORY\nWHERE YOUR CHOICES DON'T MATTER")
+      (send this insert "\n"))
 
     (define/public (add snip)
       (send this insert "\n" (send this last-position) 'same)

@@ -1,8 +1,8 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse))
 
-(define debug-mode #t)
-(define-for-syntax enable-designs #f)
+(define debug-mode #f)
+(define-for-syntax enable-designs #t)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
 ;; | Copyright 2024 Cadence Ember    |
@@ -103,6 +103,7 @@
 (define @debug-mode (obs debug-mode))
 
 (define log (new log-text%))
+(send log show-intro)
 (define (add-to-log s)
   (when (obs-peek @debug-mode)
     (printf "adding to log: ~v~n" s))
@@ -313,12 +314,12 @@
    (hpanel
     (when-design
      (vpanel
-      #:min-size (@> (list (truncate (* @width 1/3)) #f))
       (spheretrace-viewer
        @design-thunk)
       (text "Drag to rotate, scroll to zoom, Z to reset."))
      (else (vpanel*)))
     (vpanel
+     #:min-size (@> (list (truncate (* @width 1/6)) #f))
      (editor-canvas log #f)
      (vpanel-
       (observable-view
@@ -327,7 +328,7 @@
          (or view
              (vpanel
               (hpanel-
-               #:min-size '(#f 30)
+               #:min-size '(#f 38)
                (editor-canvas input-text #t))))))))))))
 
 (define r (make-window))

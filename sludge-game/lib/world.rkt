@@ -7,8 +7,7 @@
 ;; \_________________________________/
 
 
-(require racket/generator
-         struct-plus-plus)
+(require racket/generator struct-plus-plus)
 (require (for-syntax racket/base
                      racket/string
                      syntax/parse))
@@ -21,7 +20,8 @@
                 [(entry-cutscene null) list?]
                 [(description null) list?]
                 [(re-entry-cutscene null) list?]
-                [(commands (hash)) hash?])
+                [(commands (make-hash)) hash?])
+          (#:rule ("make hash mutable" #:transform commands (commands) [(hash-copy commands)]))
           #:transparent)
 (struct++ cutscene (id name def) #:transparent)
 
