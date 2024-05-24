@@ -12,9 +12,25 @@ This is an interactive fiction made for [Spring Lisp Game Jam 2024](https://itch
 
 `racket sludge-game/main.rkt`
 
-## Debug
+## Development workflow
+
+### General
 
 Set `debug-mode` to `#t` in `racket sludge-game/main.rkt` and re-run to activate debugging menus.
+
+### Designs
+
+Work in the `sludge-game/designs` folder using any text editor.
+
+Create a new design with lang line `#lang ruckus` and [develop it in the usual Ruckus way](https://docs.racket-lang.org/ruckus/Getting_Your_Ruckus_On.html). Hint: No need to restart the `ruckus-3d` process every time! You can just press F5 to reload the design from the file.
+
+The design cannot be compiled into the game if it has `#lang ruckus`. When you're happy with the design, add it to the game by changing the lang line to `#lang reader "reader.rkt"` and adding the design's file name to the last form in `all.rkt`. However, being part of the game removes F5 reload and increases overall compile time, so `#lang ruckus` is recommended for rapid iteration.
+
+### Story
+
+Work in the `sludge-game/room.rkt` file using DrRacket or Emacs racket-mode.
+
+Write rooms and cutscenes. Press F5 to just run `room.rkt` without the rest of the game. This will quickly check that the syntax and references are all OK. After `room.rkt` runs successfully with no output, run `sludge-game/main.rkt` as usual to experience your new story in the game environment.
 
 ## License, acknowledgements, folder structure
 
