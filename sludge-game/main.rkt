@@ -112,6 +112,9 @@
                         [tab-cb (λ () (autocomplete-right))]
                         [@input @input]))
 
+;; To avoid letters clipping on the editor-snip:
+;; Windows: 125%, 150%, 175% zoom needs 1 spacing. 100%, 200% zoom needs 0 spacing.
+(define left-margin (if (integer? (gui:get-display-backing-scale)) 0 1))
 (define ac-editor (new autocomplete-text%))
 (define ac-editor-snip (new gui:editor-snip%
                             [editor ac-editor]
@@ -119,7 +122,8 @@
                             [top-margin 0]
                             [right-margin 0]
                             [bottom-margin 0]
-                            [left-margin 0]))
+                            [left-margin left-margin]
+                            [left-inset 0]))
 (send input-text insert ">")
 (send input-text insert ac-editor-snip)
 
@@ -317,4 +321,5 @@
          (or view
              (vpanel
               (hpanel-
+               #:min-size '(#f 30)
                (editor-canvas input-text #t))))))))))))

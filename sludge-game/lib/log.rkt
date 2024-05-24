@@ -43,7 +43,7 @@ window
       (new gui:editor-canvas%
            [parent parent]
            [editor (obs-peek @editor)]
-           [style (if editable? '(no-hscroll) '(no-hscroll no-focus))]))
+           [style (if editable? '(no-hscroll no-vscroll) '(no-hscroll no-focus))]))
 
     (define/public (update v what val)
       (case/dep what
