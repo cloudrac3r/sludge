@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse))
 
 (define debug-mode #t)
-(define-for-syntax enable-designs #t)
+(define-for-syntax enable-designs #f)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
 ;; | Copyright 2024 Cadence Ember    |

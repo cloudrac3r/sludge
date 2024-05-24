@@ -15,6 +15,7 @@
 (require racket/generator
          racket/gui/easy
          racket/gui/easy/operator
+         "lib/at-map.rkt"
          "lib/flags.rkt"
          "lib/world.rkt")
 (provide (all-defined-out))
@@ -28,7 +29,28 @@
   #:description '(cutscene:bedroom-description)
   #:re-entry-cutscene '(cutscene:bedroom-re-entry)
   #:commands (hash '("go" "closet") 'room:closet
-                   '("go" "front door") 'cutscene:front-door))
+                   '("go" "front door") 'cutscene:front-door
+                   '("go" "bed") 'cutscene:bed))
+
+
+(define-cutscene (bed)
+  (define sem (make-semaphore))
+  (define sleepy #f)
+  (yield "Are you SURE you want to go back to bed?")
+  (yield (list (hpanel (button "Ahh... must... stay... up..." (λ () (semaphore-post sem)))
+                       (button "So sleepy..." (λ () (set! sleepy #t) (semaphore-post sem))))
+               sem))
+  (if sleepy
+      (begin
+        (yield ">\"So sleepy...\"")
+        (yield (list (hpanel (button "..." (λ () (semaphore-post sem))))
+                     sem))
+        (yield ">*snore*")
+        (yield (list (hpanel (text "... snore ..."))
+                     sem)))
+      (begin
+        (yield ">\"Ahh... must... stay... up...\"")
+        (yield "You force yourself to open your eyes wider. Your efforts are rewarded with being able to see the trash around the edges of the room."))))
 
 
 
@@ -107,7 +129,7 @@
 
 (define-cutscene (wear-suit)
   (set-flag 'closet:taken 'suit)
-  (yield "You put on the suit."))
+  (yield "You take the suit off its hanger and get dressed."))
 
 
 
