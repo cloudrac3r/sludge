@@ -61,6 +61,8 @@ window
 (define log-text%
   (class gui:text%
     (super-new)
+    (inherit last-position find-snip get-snip-location scroll-editor-to)
+
     (send this auto-wrap #t)
     (define/public (show-intro)
       (send this insert "SLUDGE FICTION\nAN INTERACTIVE STORY\nWHERE YOUR CHOICES DON'T MATTER")
@@ -68,7 +70,14 @@ window
 
     (define/public (add snip)
       (send this insert "\n" (send this last-position) 'same)
-      (send this insert snip (send this last-position) 'same))))
+      (send this insert snip (send this last-position) 'same))
+
+    (define/augment (after-insert s l)
+      (define last-snip (send this find-snip (last-position) 'after))
+      (define x (box 0))
+      (define y (box 0))
+      (define location (get-snip-location last-snip x y #t))
+      (scroll-editor-to (unbox x) (unbox y) 0 0 #t 'end))))
 
 (define input-text%
   (class gui:text%

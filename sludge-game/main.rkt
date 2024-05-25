@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse))
 
-(define debug-mode #f)
+(define debug-mode #t)
 (define-for-syntax enable-designs #t)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
@@ -28,6 +28,7 @@
          racket/contract
          racket/format
          racket/function
+         racket/list
          racket/match
          racket/set
          racket/string
@@ -44,12 +45,6 @@
  (require (prefix-in design: "design/all.rkt")
           "../viz/spheretrace-viewer.rkt"))
 
-;; --- MODELS ----------------------------------------------------------------------------------------
-
-(when-design
- (define models (hash->list design:all #t))
- (define/obs @design-thunk (cdr (car models))))
-
 ;; --- ROOMS -----------------------------------------------------------------------------------------
 
 (define/obs @visited (set))
@@ -65,6 +60,16 @@
       (for ([id (append (room-entry-cutscene room) (room-description room))])
         (execute-cutscene id)))
   (@visited . <~ . (λ (visited) (set-add visited id))))
+
+;; --- MODELS ----------------------------------------------------------------------------------------
+
+(when-design
+ (define models (hash->list design:all #t))
+ (define/obs @design-thunk design:empty)
+ (obs-observe!
+  @current-room
+  (λ (room)
+    (:= @design-thunk (hash-ref design:all (or (room-model room) 'empty))))))
 
 ;; --- CUTSCENES -------------------------------------------------------------------------------------
 
@@ -107,7 +112,18 @@
 (define (add-to-log s)
   (when (obs-peek @debug-mode)
     (printf "adding to log: ~v~n" s))
-  (send log add (make-object gui:string-snip% s)))
+  (define snip (if (is-a? s gui:snip%)
+                   s
+                   (make-object gui:string-snip% s)))
+  (send log add snip))
+
+(define (show-how-to-play)
+  (add-to-log "HOW TO PLAY THE GAME")
+  (add-to-log "Click the input box at the bottom. Write what you want to do, then press Return.")
+  (add-to-log "The blue text suggests your available actions. Press Tab to accept suggestion.")
+  (add-to-log "Feedback will appear in this top area.")
+  (add-to-log ""))
+(show-how-to-play)
 
 (define/obs @input "")
 (define input-text (new input-text%
@@ -139,6 +155,10 @@
 (define ac-ul-style (send sl new-named-style "Autocomplete Underline" standard))
 (send ac-ul-style set-delta
       (send (make-object gui:style-delta% 'change-toggle-underline)
+            set-delta-foreground "blue"))
+(define cmd-style (send sl new-named-style "Command" standard))
+(send cmd-style set-delta
+      (send (make-object gui:style-delta%)
             set-delta-foreground "blue"))
 
 (send input-text apply-constraints)
@@ -226,7 +246,9 @@
 
 (define (process-input text)
   (add-to-log "")
-  (add-to-log (format ">~a" text))
+  (define cmd-line (make-object gui:string-snip% (format ">~a" text)))
+  (send cmd-line set-style cmd-style)
+  (add-to-log cmd-line)
   (define words (split-command text))
   (define room (obs-peek @current-room))
   (define valid-verbs (list->set (append '("look" "go")
@@ -234,10 +256,7 @@
                                            (car k)))))
   (match words
     [(list "" "")
-     (add-to-log "HOW TO PLAY THE GAME")
-     (add-to-log "Click the input box at the bottom. Write what you want to do, then press Return.")
-     (add-to-log "The blue text suggests your available actions. Press Tab to accept suggestion.")
-     (add-to-log "Feedback will appear in the top area.")]
+     (show-how-to-play)]
 
     [(list "debug" "")
      (@debug-mode . <~ . not)
@@ -270,66 +289,73 @@
 (define/obs @width 1000)
 
 (define (make-window)
- (render
-  (window
-   #:size (list (obs-peek @width) 600)
-   #:title "Sludge"
-   #:mixin (λ (%)
-             (class %
-               (super-new)
-               (define/override (on-size width height)
-                 (:= @width width))))
-   (if (obs-peek @debug-mode)
-       (menu-bar
-        (apply menu "Room"
-               (for/list ([(id room) (in-hash world)]
-                          #:when (room? room))
-                 (checkable-menu-item (room-name room) (λ _ (execute-room id))
-                                      #:checked? (@> (eq? id @current-room-id)))))
-        (apply menu "Cutscene"
-               (for/list ([(id cutscene) (in-hash world)]
-                          #:when (cutscene? cutscene))
-                 (menu-item (~a id) (λ _ (execute-cutscene id)))))
-        (when-design
-         (apply menu "Model"
-                (for/list ([model models])
-                  (menu-item (~a (car model)) (λ _ (:= @design-thunk (cdr model))))))
-         (else (menu "Model"
-                     (menu-item #:enabled? #f "<models not loaded>"))))
-        (apply menu "Flags"
-               (let ([flags (obs-peek @flags)])
-                 (for/list ([k (hash-keys (obs-peek @flags) #t)])
-                   (define name (symbol->string k))
-                   (define v (hash-ref flags k))
-                   (define @v (@> (hash-ref @flags k)))
-                   (if (boolean? v)
-                       (checkable-menu-item
-                        name
-                        #:checked? @v
-                        (λ _ (toggle-flag k)))
-                       (menu-item
-                        (@> "~a = ~a" name @v)
-                        (λ _ (interactive-set-flag k))))))))
-       (hpanel-))
-   (hpanel
-    (when-design
+  (render
+   (window
+    #:size (list (obs-peek @width) 600)
+    #:title "Sludge"
+    #:mixin (λ (%)
+              (class %
+                (super-new)
+                (define/override (on-size width height)
+                  (:= @width width))))
+    (if (obs-peek @debug-mode)
+        (menu-bar
+         (apply menu "Room"
+                (for/list ([(id room) (in-hash world)]
+                           #:when (room? room))
+                  (checkable-menu-item (room-name room) (λ _ (execute-room id))
+                                       #:checked? (@> (eq? id @current-room-id)))))
+         (apply menu "Cutscene"
+                (let ([next-levels
+                       (for/list ([(id cutscene) (in-hash world)]
+                                  #:when (cutscene? cutscene))
+                         (car (string-split (cutscene-name cutscene) " ")))])
+                  (for/list ([l (remove-duplicates (sort next-levels string<?))])
+                    (apply menu l
+                           (for/list ([(id cutscene) (in-hash world)]
+                                      #:when (cutscene? cutscene)
+                                      #:when (string-prefix? (cutscene-name cutscene) l))
+                             (menu-item (~a id) (λ _ (execute-cutscene id))))))))
+         (when-design
+          (apply menu "Model"
+                 (for/list ([model models])
+                   (menu-item (~a (car model)) (λ _ (:= @design-thunk (cdr model))))))
+          (else (menu "Model"
+                      (menu-item #:enabled? #f "<models not loaded>"))))
+         (apply menu "Flags"
+                (let ([flags (obs-peek @flags)])
+                  (for/list ([k (hash-keys (obs-peek @flags) #t)])
+                    (define name (symbol->string k))
+                    (define v (hash-ref flags k))
+                    (define @v (@> (hash-ref @flags k)))
+                    (if (boolean? v)
+                        (checkable-menu-item
+                         name
+                         #:checked? @v
+                         (λ _ (toggle-flag k)))
+                        (menu-item
+                         (@> "~a = ~a" name @v)
+                         (λ _ (interactive-set-flag k))))))))
+        (hpanel-))
+    (hpanel
+     (when-design
+      (vpanel
+       (spheretrace-viewer
+        @design-thunk)
+       (text "Drag to rotate, scroll to zoom, Z to reset."))
+      (else (vpanel*)))
      (vpanel
-      (spheretrace-viewer
-       @design-thunk)
-      (text "Drag to rotate, scroll to zoom, Z to reset."))
-     (else (vpanel*)))
-    (vpanel
-     #:min-size (@> (list (truncate (* @width 1/6)) #f))
-     (editor-canvas log #f)
-     (vpanel-
-      (observable-view
-       @interaction
-       (λ (view)
-         (or view
-             (vpanel
-              (hpanel-
-               #:min-size '(#f 38)
-               (editor-canvas input-text #t))))))))))))
+      #:min-size (@> (list (truncate (* @width 1/6)) #f))
+      (editor-canvas log #f)
+      (vpanel-
+       (observable-view
+        @interaction
+        (λ (view)
+          (or view
+              (vpanel
+               (hpanel-
+                #:min-size '(#f 38)
+                (editor-canvas input-text #t))))))))))))
 
 (define r (make-window))
 (obs-observe! @debug-mode (λ _

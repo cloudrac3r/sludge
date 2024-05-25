@@ -17,6 +17,7 @@
 
 (struct++ room ([id symbol?]
                 [name string?]
+                [(model #f) symbol?]
                 [(entry-cutscene null) list?]
                 [(description null) list?]
                 [(re-entry-cutscene null) list?]

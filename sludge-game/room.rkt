@@ -29,6 +29,7 @@
 
 
 (define-room bedroom
+  #:model 'bedroom
   #:entry-cutscene '(cutscene:bedroom-entry)
   #:description '(cutscene:bedroom-description)
   #:re-entry-cutscene '(cutscene:bedroom-re-entry)
@@ -67,34 +68,16 @@
 
 
 
-(define-cutscene (front-door)
-  (cond
-    [(not (get-flag 'has-interview))
-     (yield "It's even colder out there. You'd rather stay indoors.")]
-
-    [(eq? (get-flag 'closet:taken) 'nothing)
-     (yield "You can't leave until you've gotten dressed.")]
-
-    [else (yield (list "go" 'room:work))]))
-
-
-(define-room work
-  #:description '(cutscene:work-description))
-
-(define-cutscene (work-description)
-  (yield "Welcome to work."))
-
-
-
 (define-room closet
+  #:model 'closet
   #:entry-cutscene '(cutscene:closet-entry)
   #:description '(cutscene:closet)
   #:re-entry-cutscene '(cutscene:closet-re-entry)
   #:commands (hash '("go" "bedroom") 'room:bedroom
-                   '("look" "suit") 'cutscene:suit
-                   '("look" "sludge merch") 'cutscene:sludge-merch
-                   '("wear" "suit") 'cutscene:wear-suit
-                   '("wear" "sludge merch") 'cutscene:wear-sludge-merch))
+                   '("look" "suit") 'cutscene:closet-suit
+                   '("look" "sludge merch") 'cutscene:closet-sludge-merch
+                   '("wear" "suit") 'cutscene:closet-wear-suit
+                   '("wear" "sludge merch") 'cutscene:closet-wear-sludge-merch))
 
 (define-cutscene (closet-entry)
   (yield "You step between the open doors of the closet."))
@@ -105,32 +88,33 @@
 (define-cutscene (closet)
   (yield
    (case (get-flag 'closet:taken)
-     [(nothing) "The bedroom light has never quite been able to illuminate its depths. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, you can spot two fairly presentable outfits hanging on the rail. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
+     [(nothing) "The bedroom light has never quite been able to illuminate its depths. The floor and shelves, shrouded in darkness, are piled with dirty clothes that are waiting for a wash. Despite the mess, you can spot two clean outfits hanging on the rail. One of them is a formal blue suit you've been saving for a job interview. The other is a branded Sludge Co t-shirt you won in a raffle."]
      [(suit) "The Sludge Co t-shirt looks mockingly at you from the end of the rail. You try to push it out of your mind."]
      [(merch) "The suit remains on the rail dispassionately."])))
 
-(define-cutscene (suit)
-  (yield "It's a blue suit that you neatly ironed months ago when the world seemed to hold more hope and time. The neighbouring clothes hanger holds a dress shirt, and matching trousers are dangling over the rail."))
+(define-cutscene (closet-suit)
+  (yield "It's a blue suit that you neatly ironed months ago when the world seemed to hold more hope and time. The clothes hanger also holds a dress shirt, and matching trousers are dangling over the rail."))
 
-(define-cutscene (sludge-merch)
-  (yield "It is indescribable."))
+(define-cutscene (closet-sludge-merch)
+  (yield "It's almost indescribably bad. It's a t-shirt that's mostly brown, but has a splatter pattern of red, green and yellow marks printed on it. It has the word \"SLUDGE\" diagonally across the front in a huge font that wouldn't feel out of place in a 2014 Minecraft video thumbnail. The inside label says, \"Show your Sludge Pride!\" Unlike the other t-shirts crumpled on the floor, this one is hanging on the clothes rail - not out of respect, but simply because you haven't ever worn it."))
 
-(define-cutscene (wear-suit)
+(define-cutscene (closet-wear-suit)
   (set-flag 'closet:taken 'suit)
-  (yield "You take the suit off its hanger and get dressed."))
+  (yield "You take the suit from its hanger and get dressed."))
 
-(define-cutscene (wear-sludge-merch)
+(define-cutscene (closet-wear-sludge-merch)
   (set-flag 'closet:taken 'merch)
   (yield "You pull the hideous t-shirt over your torso, and find some complimenting shorts nearby. The colours almost don't clash."))
 
 
 
 (define-room kitchen
+  #:model 'kitchen
   #:description '(cutscene:kitchen-description)
   #:re-entry-cutscene '(cutscene:kitchen-re-entry)
   #:commands (hash '("go" "bedroom") 'room:bedroom
                    '("go" "living room") 'room:living-room
-                   '("take" "glass of water") 'cutscene:kitchen-take-water
+                   '("take" "water") 'cutscene:kitchen-take-water
                    '("look" "floor") 'cutscene:kitchen-floor
                    '("look" "sink") 'cutscene:kitchen-sink
                    '("look" "cupboard") 'cutscene:kitchen-cupboard
@@ -147,7 +131,7 @@
 (define-cutscene (kitchen-take-water)
   (yield "You take the glass of water.")
   (set-flag 'water 'taken)
-  (hash-remove! (room-commands (hash-ref world 'room:kitchen)) '("take" "glass of water")))
+  (hash-remove! (room-commands (hash-ref world 'room:kitchen)) '("take" "water")))
 
 (define-cutscene (kitchen-re-entry)
   (yield "You head back into the kitchen."))
@@ -167,10 +151,11 @@
 
 
 (define-room living-room
+  #:model 'living-room
   #:description '(cutscene:living-room-description)
   #:re-entry-cutscene '(cutscene:living-room-re-entry)
   #:commands (hash '("go" "kitchen") 'room:kitchen
-                   '("go" "bedroom") 'room:bedroom
+                   '("go" "front door") 'cutscene:front-door
                    '("look" "sofa") 'cutscene:living-room-sofa
                    '("look" "bookshelf") 'cutscene:living-room-bookshelf
                    '("look" "window") 'cutscene:living-room-window
@@ -183,7 +168,7 @@
   (yield "It's a compact, open-plan kitchen and living room. The walls are plain white. You spend most of your time in here, since thinking about the mess in your bedroom stresses you out."))
 
 (define-cutscene (living-room-re-entry)
-  (yield "You wander back into the living room, feeling a sense of calm wash over you."))
+  (yield "You walk into the living room again. The table catches your attention."))
 
 (define-cutscene (living-room-sofa)
   (yield "The large fabric sofa, covered in cushions of varying colours and sizes, is practically luxurious in this room. It's your favourite place to sit and relax."))
@@ -191,9 +176,9 @@
 (define-cutscene (living-room-bookshelf)
   (yield "When you moved out here, you insisted on bringing the bookshelf with all the books you read as a teenager. There are so many books that some are piled on the shelves, obscuring the titles of the neatly arranged novels behind them. A large spider plant, which is somehow thriving despite your infrequent care, rests on the very top.")
   (when (not (eq? (get-flag 'water) 'watered))
-    (hash-set! (room-commands (hash-ref world 'room:living-room)) '("water" "plant") 'cutscene:water-plant)))
+    (hash-set! (room-commands (hash-ref world 'room:living-room)) '("water" "plant") 'cutscene:living-water-plant)))
 
-(define-cutscene (water-plant)
+(define-cutscene (living-water-plant)
   (cond
     [(eq? (get-flag 'water) 'taken)
      (yield "You gently pour the water onto the plant. Naturally, it doesn't respond, but you like to think it appreciates your care. A small amount of water slowly dribbles out the bottom of the pot.")
@@ -219,15 +204,15 @@
     #("" "Borcon Council" "Your Application Status"
          "Dear [Candidate's First Name],\n\nAfter careful consideration, we have decided not to move forward with your application at this time. We received a significant number of applications from qualified candidates like yourself, making this selection process extremely difficult.\n\nDue to the high volume of applications, we are not able to provide individual feedback to candidates. However, we do hope you'll stay connected with us and keep an eye on our future career opportunities. If a suitable position opens up again, we would love to hear from you and consider your application.\n\nWe wish you all the best in your job search.\n\nBorcon\nBuilding A Better Future")
     #("" "Candidate+" "0 New Companies Saw Your Profile This Week"
-         "Dear [Insert First Name Here],\n\n0 new companies visited your profile this week. Keep up the great work!\n\nIn the last week:\n+0 views  /  +0 likes  /  +0 requests\n\nYours,\nCandidate+\n~We put the magic in hiring~")
+         "Wowzers!\n\n0 new companies visited your profile this week. Keep up the great work!\n\nIn the last week:\n+0 views  /  +0 likes  /  +0 requests\n\nYours,\nCandidate+\n~We put the magic in hiring~")
     #("" "Waste Management" "Barrel Specialist: Application Rejected"
          "I hope this email finds you well.\n\nUnfortunately, after thinking long and hard, we will not be continuing with your application at this time. We feel that while your résumé showed immense experience in barrels, it didn't demonstrate enough expertise with casks or receptacles, and we decided to persue a more qualified candidate.\n\nYou are always encouraged to improve your skills and apply for a role in the future.\n\nKind regards,\n\nWynn Jackon\nWaste Management\n~Don't waste today - waste away!~")
     #("" "Dairy Life" "RE: Role as cowtaker"
-         "Thanks for your interest in this role.\n\nSadly, we do require candidates to have prior experience in handling large animals before we can continue with the hiring process. You are welcome to re-apply if you undergo additional training in the future.\n\nBest,\n\nBlake\nSenior Cow Coordinator\nDairy Life")
+         "Thanks for your interest in this role.\n\nTo protect the wellbeing of our livestock, we do require candidates to have prior experience in handling large animals before we can continue with the hiring process. You are welcome to re-apply if you undergo additional training in the future.\n\nBest,\n\nBlake\nSenior Cow Coordinator\nDairy Life")
     #("" "Recruit-o-matic" "Your Application Was Unsuccessful"
          "(You're too disappointed to read the rejection letter.)")
-    #("" "Crew Cashew" "Your Application For Nut Crusher"
-         "(You're too disappointed to read the rejection letter.)")))
+    #("" "Cashew Crew" "Your Application For Nut Crusher"
+         "(You're too scared of it being a rejection letter to actually open it.)")))
 
 (define-cutscene (laptop)
   (yield "You open your laptop. Some new emails have come in since you checked last night.")
@@ -238,6 +223,11 @@
   (define r
     (render
      (window
+      #:mixin (λ (%)
+                (class %
+                  (super-new)
+                  (define/augment (on-close)
+                    (semaphore-post sem))))
       #:title "Totally Legit Email Program"
       #:size '(660 700)
       (table
@@ -247,14 +237,37 @@
        emails
        #:entry->row (λ (entry) (vector-take entry 3))
        (λ (action table n)
-         (when (eq? action 'select)
+         (when (and (eq? action 'select) n)
            (send editor erase)
            (send editor insert (vector-ref (vector-ref table n) 3))
-           (send editor set-position 0 0))))
+           (send editor set-position 0 0)
+           (when (= n 1)
+             (set-flag 'has-interview #t)))))
       (editor-canvas editor #f))))
   (yield (list (button "All done." (λ () (semaphore-post sem)))
                sem))
-  (renderer-destroy r))
+  (renderer-destroy r)
+  (when (get-flag 'has-interview)
+    (yield "")
+    (yield "Finally, after months of grinding, I landed a job interview!! I'd better get ready so I can make a good first impression.")))
+
+
+
+(define-cutscene (front-door)
+  (cond
+    [(not (get-flag 'has-interview))
+     (yield "It's even colder out there. You'd rather stay indoors.")]
+
+    [(eq? (get-flag 'closet:taken) 'nothing)
+     (yield "You can't leave until you've gotten dressed.")]
+
+    [else (yield (list "go" 'room:work))]))
+
+(define-room work
+  #:description '(cutscene:work-description))
+
+(define-cutscene (work-description)
+  (yield "Welcome to work."))
 
 
 
