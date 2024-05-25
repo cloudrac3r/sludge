@@ -7,14 +7,19 @@
 ;; \_________________________________/
 
 
-(require racket/gui/easy
+(require racket/set
+         racket/gui/easy
          racket/gui/easy/operator)
 (provide (all-defined-out))
 
 (define/obs @flags
   (hasheq 'closet:taken 'nothing
           'water 'kitchen
-          'has-interview #f))
+          'has-interview #f
+          'outside:waited (set)
+          'outside:handshake #f
+          'outside:knocked #f
+          'outside:door-unlocked #f))
 
 (define (toggle-flag k)
   (@flags . <~ . (λ (flags) (hash-update flags k (λ (v) (not v))))))

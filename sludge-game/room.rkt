@@ -14,6 +14,7 @@
 
 (require racket/class
          racket/generator
+         racket/set
          racket/vector
          (prefix-in gui: racket/gui)
          racket/gui/easy
@@ -251,8 +252,6 @@
     (yield "")
     (yield "Finally, after months of grinding, I landed a job interview!! I'd better get ready so I can make a good first impression.")))
 
-
-
 (define-cutscene (front-door)
   (cond
     [(not (get-flag 'has-interview))
@@ -261,13 +260,90 @@
     [(eq? (get-flag 'closet:taken) 'nothing)
      (yield "You can't leave until you've gotten dressed.")]
 
-    [else (yield (list "go" 'room:work))]))
+    [else (yield (list "go" 'room:outside))]))
 
-(define-room work
-  #:description '(cutscene:work-description))
 
-(define-cutscene (work-description)
-  (yield "Welcome to work."))
+
+(define-room outside
+  #:entry-cutscene '(cutscene:outside-entry)
+  #:description '(cutscene:outside-description)
+  #:commands (hash '("look" "door") 'cutscene:outside-door
+                   '("look" "sign") 'cutscene:outside-sign
+                   '("look" "car park") 'cutscene:outside-car-park
+                   '("knock" "") 'cutscene:outside-knock
+                   '("go" "inside") 'cutscene:outside-try-go-inside))
+
+(define (check-if-door-answered caller)
+  (define waited (set-add (get-flag 'outside:waited) caller))
+  (set-flag 'outside:waited waited)
+  (when (and (>= (set-count waited) 4) (not (get-flag 'outside:door-unlocked)))
+    (answer-door)))
+
+(define-cutscene (outside-entry)
+  (yield "At 2:30 PM, you find yourself outside the locked door of the Sludge Co building."))
+
+(define-cutscene (outside-description)
+  (yield "It looks industrial, which is to say, ugly. It doesn't need to look good - being out of the way in West Borcon, the only people who'd see it would be the employees arriving for the day. Or, in your case, soon-to-be employees?")
+  (yield "Looks like you'll just have to wait for someone to let you in."))
+
+(define-cutscene (outside-sign)
+  (yield "You're in the right place. The sign outside the building says, in loopy cursive writing, \"Sludge Enterprises: Innovating Sludge Production Since 1961.\"")
+  (check-if-door-answered 'sign))
+
+(define-cutscene (outside-car-park)
+  (yield "It says \"Employee Parking Only\", so just to be safe, you parked some distance down the road. The car park includes a device about the size of an ATM with large cables and pipes attached to it.")
+  (hash-set! (room-commands (hash-ref world 'room:outside)) '("look" "device") 'cutscene:outside-device)
+  (check-if-door-answered 'car-park))
+
+(define-cutscene (outside-device)
+  (yield "The device's instructions are hard to understand, but it seems to imply that you can park your car nearby and connect a tube to your car's exhaust in order to help the factory produce more sludge. It reminds you of try-it-yourself science museum exhibits, only dirtier. The device isn't currently being used.")
+  (check-if-door-answered 'device))
+
+(define-cutscene (outside-door)
+  (yield "The glass door is electronically locked with a card reader.")
+  (yield "Immediately past the glass door is a flight of stairs. The stairs go up so far you can't see what's at the top.")
+  (check-if-door-answered 'door))
+
+(define-cutscene (outside-answer-door) ;; Just used for the debug menu.
+  (answer-door))
+
+(define-cutscene (outside-knock)
+  (if (get-flag 'outside:knocked)
+      (yield "You knock again, harder, hurting your kuckles a bit. There is still no answer.")
+      (yield "You knock firmly on the door. There is no answer from the top of the stairs."))
+  (set-flag 'outside:knocked #t))
+
+(define (answer-door)
+  (yield "A man heads down the stairs and clicks the door open. \"Hi, I'm Chad. You must be here for your interview?\" He sticks out his hand.")
+  (define sem (make-semaphore))
+  (yield (list (hpanel (button "Shake his hand" (λ ()
+                                                  (set-flag 'outside:handshake #t)
+                                                  (semaphore-post sem)))
+                       (button "Leave him hanging" (λ () (semaphore-post sem))))
+               sem))
+  (yield (cond [(get-flag 'outside:handshake) "You shake his hand. It's sticky."]
+               [else "There is an awkward pause."]))
+  (yield (case (get-flag 'closet:taken)
+           [(merch) "You notice that he is smartly dressed. You try to read his expression, but you can't tell what he thinks of your Sludge Co t-shirt."]
+           [else "You notice that he is wearing a Sludge Co branded t-shirt."]))
+  (yield "\"Well, come inside then, and let's show you how things work around here.\" He leads the way inside, up the stairs.")
+  (set-flag 'outside:door-unlocked #t))
+
+(define-cutscene (outside-try-go-inside)
+  (cond
+    [(get-flag 'outside:door-unlocked)
+     (yield (list "go" 'room:factory))]
+
+    [else
+     (yield "The door is locked. You'll have to wait.")]))
+
+
+
+;; (define-room factory)
+
+
+
+;; (define-room work-office)
 
 
 
