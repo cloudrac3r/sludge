@@ -323,27 +323,204 @@
                sem))
   (yield (cond [(get-flag 'outside:handshake) "You shake his hand. It's sticky."]
                [else "There is an awkward pause."]))
-  (yield (case (get-flag 'closet:taken)
-           [(merch) "You notice that he is smartly dressed. You try to read his expression, but you can't tell what he thinks of your Sludge Co t-shirt."]
-           [else "You notice that he is wearing a Sludge Co branded t-shirt."]))
+  (case (get-flag 'closet:taken)
+    [(merch) (yield "You notice that he is smartly dressed. You try to read his expression, but you can't tell what he thinks of your Sludge Co t-shirt.")]
+    [else (yield "You notice he is wearing a Sludge Co branded t-shirt.")])
   (yield "\"Well, come inside then, and let's show you how things work around here.\" He leads the way inside, up the stairs.")
   (set-flag 'outside:door-unlocked #t))
 
 (define-cutscene (outside-try-go-inside)
   (cond
     [(get-flag 'outside:door-unlocked)
-     (yield (list "go" 'room:factory))]
+     (yield (list "go" 'room:office))]
 
     [else
      (yield "The door is locked. You'll have to wait.")]))
 
 
 
-;; (define-room factory)
+(define-room office
+  #:entry-cutscene '(cutscene:office-entry)
+  #:description '(cutscene:office-description)
+  #:commands (hash '("look" "window") 'cutscene:office-window
+                   '("look" "table") 'cutscene:office-table
+                   '("look" "chairs") 'cutscene:office-chairs
+                   '("look" "hole") 'cutscene:office-hole
+                   '("go" "exit") 'cutscene:office-exit))
 
+(define-cutscene (office-entry)
+  (yield "Chad leads you off the stairs into a room."))
 
+(define-cutscene (office-description)
+  (yield "It is a small, uncomfortably warm office. The room's only window looks out onto a massive room that's lower in elevation. In the middle of this room is the interview setup: two chairs facing each other with a table in between."))
 
-;; (define-room work-office)
+(define-cutscene (office-window)
+  (yield "The window is perfectly clean. In the room below, workers are milling around a giant, swimming pool-sized vat of brown sludge. The sludge is full of large chunks. The workers are doing various tasks, some holding buckets, one stirring the sludge vat with a giant rake."))
+
+(define-cutscene (office-table)
+  (yield "On the table is just a stack of white cards, face down. Nervousness tickles your spine."))
+
+(define-cutscene (office-hole)
+  (cond
+    [(get-flag 'office:lost-interview)
+     (yield "You won't be able to stop thinking about this moment whenever you close your eyes.")]
+
+    [else
+     (yield "There's some kind of horizontal hole on the wall, like a post box. It's unclear what it's for.")]))
+
+(define-cutscene (office-chairs)
+  ;; EDITOR'S NOTE: I didn't realise this was basically Evrart's office from Disco Elysium until it was too late. No plagiarism intended.
+  (yield "Facing the table are two chairs. The one closest to the door is a folding chair that looks uncomfortably small. The other looks almost like a mahogany throne and a high, cushioned back. At once you realise: this is not the office of a corporate leader, but of an emperor.")
+  (hash-set! (room-commands (hash-ref world 'room:office)) '("sit" "folding chair") 'cutscene:office-folding-chair)
+  (hash-set! (room-commands (hash-ref world 'room:office)) '("sit" "throne") 'cutscene:office-throne))
+
+(define-cutscene (office-throne)
+  (yield "Chad chuckles. \"Heh... don't get too ahead of yourself.\""))
+
+(struct card (name one two design) #:transparent)
+
+(define cards
+  (list (card "Working Together" "Team Player" "Lone Ranger" #f)
+        (card "Output" "Quality" "Quantity" #f)
+        (card "Agitation" "Patient" "Go-Getter" #f)
+        (card "Morals" "Good Person" "Bad Person" #f)
+        (card "Faith" "Love the Sinner" "Hate the Sin" #f)
+        (card "Geometry" "Rhombic Dodecahedron" "Gömböc" 'rhombic-gomboc)
+        (card "Your Alibi For 31 August 1997" "Concrete" "Flimsy" #f)
+        (card "Traffic Light" "No" "Yes" #f)))
+
+(define questions
+  (list #(equal-opportunity
+          "Are you an equal opportunity employer?"
+          "Um... of course! Besides being legally required to say yes, here at Sludge Co we really don't care about your identity. Are your pronouns sludge/gloop? No problem for us. All we need is for you to bring a sludgy attitude to work each day. And we need the personality test to be compatible, but that's just a formality."
+          ())
+        #(safety
+          "What kind of safety procedures do you use?"
+          "Well, we've put up all these warning signs anywhere you might come in to contact with sludge. That means we're legally okay in the event of an accident. Besides, it's quite safe really. The worst thing that could happen to you here is falling into the sludge. And if that happened... while your family would miss you, rest assured the cash flow from the top quality sludge produced by your body would let you have a *really* nice funeral."
+          ())
+        #(purpose
+          "So you... produce the sludge?"
+          "Yes, the sludge is our creation! We're world-famous for being the number one producer of all things gloopy, filthy, slimy and sticky. But you knew that already, right? Ha ha ha..."
+          (makeup buyers why-buy))
+        #(makeup "What is the sludge made of?"
+                 "Oh, it's made of all sorts of things! You name it, it's probably in there." ())
+        #(buyers "Who's the main buyer of all this sludge?"
+                 "We have many business partners around the world. They all want a piece of our sludge! There's no main buyer per se, but the way it usually goes is, if they have money, they buy sludge. And if they have more money they buy more sludge." ())
+        #(why-buy "Why do people want the sludge? What is it for?"
+                  "I mean... look at it!\" He gestures out the window towards the sludge pool in the other room. \"It's a really innovative product - limitless sludge on demand. Who wouldn't want it? And as long as the orders keep coming in, we'll keep filling them." ())))
+(define/obs @enabled-questions (seteq 'equal-opportunity 'safety 'purpose))
+(define @visible-questions
+  (@> (for/vector ([q (in-list questions)]
+                   #:when (set-member? @enabled-questions (vector-ref q 0)))
+        q)))
+
+(define-cutscene (office-folding-chair)
+  (yield "You sit in the folding chair and Chad sits in his throne.")
+  (yield "\"Alright. So first of all, I'll get you to answer this personality test. And then after that, you'll get to ask me some questions about what we do here. Let's get right into it. Would you mind turning over the first card?\"")
+  (yield "\"For each question, please use the slider to determine how much you identify with the statement on the card.\"")
+  (define sem (make-semaphore))
+  (yield (list (button "Look at card" (λ () (semaphore-post sem)))
+               sem))
+  (for ([card cards]
+        [i (in-naturals 1)])
+    (define/obs @p 50)
+    (yield (list "design" (card-design card)))
+    (yield (list (vpanel
+                  (hpanel- (text "") (spacer)
+                           (text (format "** Theme: ~a **" (card-name card))) (spacer)
+                           (text (format "~a/~a" i (length cards))))
+                  (hpanel- (text (@> "~a ~a%" (card-one card) (- 100 @p))) (spacer)
+                           (text "- - - - -") (spacer)
+                           (text (@> "~a% ~a" @p (card-two card))))
+                  (slider #:style '(horizontal plain)
+                          @p
+                          (λ:= @p))
+                  (button "OK" (λ () (semaphore-post sem))))
+                 sem)))
+  (yield (list "prompt" "You finish filling out the cards."))
+  (yield "\"Great, thanks for filling that out for us.\" He takes the cards and slides them into the hole on the wall. \"Our AI will analyse that shortly. Now it's your turn. Did you have any questions about the company?")
+  (your-turn-for-questions))
+
+(define-cutscene (office-your-turn-for-questions) ;; Just used for the debug menu.
+  (your-turn-for-questions))
+
+(define (your-turn-for-questions)
+  (define sem (make-semaphore))
+  (yield "\"Oh, and before you ask - no, human bodies do not contain microsludge particles. That's a lie made up by doctors, environmentalists, and concerned denizens of the world - you can't trust any of them.\"")  
+  (let loop ()
+    (define continue #f)
+    (yield (list (hpanel-
+                  (button "Ask..." (λ () (set! continue #t) (semaphore-post sem)))
+                  (button "All done." (λ () (semaphore-post sem))))
+                 sem))
+    (when continue
+      (define/obs @selection 0)
+      (define r
+        (render
+         (window
+          #:title "What do you want to ask?"
+          #:size '(400 300)
+          #:mixin (λ (%)
+                    (class %
+                      (super-new)
+                      (define/augment (on-close)
+                        (set! continue #f)
+                        (semaphore-post sem))))
+          (table
+           '("Select question")
+           @visible-questions
+           #:entry->row (λ (q) (vector (vector-ref q 1)))
+           (λ (action table n)
+             (when (and (eq? action 'select) n)
+               (:= @selection n)))
+           #:style '(single column-headers)
+           #:selection @selection)
+          (button "Ask" #:enabled? (@> (not (not @selection))) (λ () (semaphore-post sem))))))
+      (yield (list (spacer)
+                   sem))
+      (renderer-destroy r)
+      (when (and continue (obs-peek @selection))
+        (define chosen (vector-ref (obs-peek @visible-questions) (obs-peek @selection)))
+        (yield (list "prompt" (vector-ref chosen 1)))
+        (yield (format "\"~a\"" (vector-ref chosen 2)))
+        (@enabled-questions . <~ . (λ (e) (set-union e (apply seteq (vector-ref chosen 3)))))
+        (loop)))
+    (void))
+
+  (set-flag 'office:lost-interview #t)
+  (hash-remove! (room-commands (hash-ref world 'room:office)) '("look" "chairs"))
+  (hash-remove! (room-commands (hash-ref world 'room:office)) '("sit" "folding chair"))
+  (hash-remove! (room-commands (hash-ref world 'room:office)) '("sit" "throne"))
+  (yield (list "prompt" "You finish asking your questions."))
+  (yield "There is a whirring nearby, followed by a *ding!*. Chad gets up and walks to the slot in the wall, and retrieves a paper printout from it. He unfolds it, and narrows his eyes as he reads. \"Alright, so the results of the personality test are back...\"")
+  (gui:yield)
+  (yield "You hold your breath. \"And it says you're kind of a loser. Huh, never seen that one before. Well, unfortunately we won't be hiring you today.\"")
+  (gui:yield))
+
+(define-cutscene (office-exit)
+  (cond
+    [(get-flag 'office:lost-interview)
+     (yield "You leave without saying a word. The events of the day keep replaying in your head as you drive home.")
+     (yield "After you get home, you check your laptop. There is a new email from Sludge Co.")
+     (define sem (make-semaphore))
+     (yield (list (button "Read email" (λ () (semaphore-post sem)))
+                  sem))
+     (define editor (new log-text%))
+     (define r
+       (render
+        (window
+         #:title "Thank you!"
+         #:size '(510 400)
+         (editor-canvas editor #f))))
+     (send editor erase)
+     (send editor insert "We're sorry to hear about your recent interview.\n\nWhile you weren't successful this time, we're always keen on adding new members to our team. To assist in future hiring, a report of your interview performance was automatically generated and sent to our subsidiaries:\n\nSLUDGE ENGINE\n* Cadence Ember\n\nSLUDGE WRITING\n* Cadence Ember\n* James Havoc\n\nRUCKUS 3D VISUALISER\n* Cliff L. Biffle\n\nGRAPHICAL SUPPORT\n* Bogdan Popa\n\nRACKET PROGRAMMING ENVIRONMENT\n* https://racket-lang.org/team.html\n\nThank you for playing this SLUDGE FICTION interactive experience!")
+     (send editor set-position 0 0)
+     (yield (list (text "THE END")
+                  sem))
+     (renderer-destroy r)]
+
+    [else
+     (yield "There is no escape.")]))
 
 
 

@@ -20,7 +20,7 @@ function do
     or exit
 end
 
-if grep -q -E 'debug-mode.*t' sludge-game/main.rkt
+if grep -q -E 'debug-mode.*#t' sludge-game/main.rkt
     echo "HEY! Debug mode is on. Turn this off for the final build."
 end
 

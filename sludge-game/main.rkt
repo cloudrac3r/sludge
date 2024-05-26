@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse))
 
-(define debug-mode #t)
+(define debug-mode #f)
 (define-for-syntax enable-designs #t)
 
 ;; /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
@@ -63,9 +63,10 @@
 
 ;; --- MODELS ----------------------------------------------------------------------------------------
 
+(define/obs @design-thunk #f)
 (when-design
  (define models (hash->list design:all #t))
- (define/obs @design-thunk design:empty)
+ (void (:= @design-thunk design:empty))
  (obs-observe!
   @current-room
   (λ (room)
@@ -98,9 +99,21 @@
            (execute-room (:= @current-room-id dest-sym))
            #f #| switch to the cutscene of the new room |#]
 
+          [(list "prompt" text)
+           (define cmd-line (make-object gui:string-snip% (format ">~a" text)))
+           (send cmd-line set-style cmd-style)
+           (add-to-log cmd-line)]
+
+          [(list "design" design-sym)
+           (when-design
+            (define room (obs-peek @current-room))
+            (:= @design-thunk (hash-ref design:all (or design-sym (room-model room) 'empty))))
+           (void)]
+
           [else
            (error 'execute-cutscene "cutscene ~v produced a value ~v which did not match any patterns" id i)])
 
+      (gui:sleep/yield 0.01)
       (loop))))
 
 ;; --- LOG -------------------------------------------------------------------------------------------
@@ -345,7 +358,8 @@
        (text "Drag to rotate, scroll to zoom, Z to reset."))
       (else (vpanel*)))
      (vpanel
-      #:min-size (@> (list (truncate (* @width 1/6)) #f))
+      #:min-size (@> (list (truncate (* @width 4/9)) #f))
+      #:stretch '(#f #t)
       (editor-canvas log #f)
       (vpanel-
        (observable-view

@@ -31,4 +31,4 @@
     [_
      #'(void)]))
 
-(design empty kitchen closet bedroom living-room)
+(design empty kitchen closet bedroom living-room rhombic-gomboc)

@@ -19,7 +19,8 @@
           'outside:waited (set)
           'outside:handshake #f
           'outside:knocked #f
-          'outside:door-unlocked #f))
+          'outside:door-unlocked #f
+          'office:lost-interview #f))
 
 (define (toggle-flag k)
   (@flags . <~ . (λ (flags) (hash-update flags k (λ (v) (not v))))))

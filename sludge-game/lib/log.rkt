@@ -64,20 +64,29 @@ window
     (inherit last-position find-snip get-snip-location scroll-editor-to)
 
     (send this auto-wrap #t)
+
+    (define (safe-insert snip start end)
+      (with-handlers ([exn:fail?
+                       (λ (e)
+                         (gui:sleep/yield 0.01)
+                         (safe-insert snip start end))])
+        (send this insert snip start end)))
+
     (define/public (show-intro)
       (send this insert "SLUDGE FICTION\nAN INTERACTIVE STORY\nWHERE YOUR CHOICES DON'T MATTER")
       (send this insert "\n"))
 
     (define/public (add snip)
-      (send this insert "\n" (send this last-position) 'same)
-      (send this insert snip (send this last-position) 'same))
+      (safe-insert "\n" (send this last-position) 'same)
+      (safe-insert snip (send this last-position) 'same)
 
-    (define/augment (after-insert s l)
-      (define last-snip (send this find-snip (last-position) 'after))
-      (define x (box 0))
-      (define y (box 0))
-      (define location (get-snip-location last-snip x y #t))
-      (scroll-editor-to (unbox x) (unbox y) 0 0 #t 'end))))
+      ;; scroll
+      (when ((send snip get-count) . > . 0)
+        (define x (box 0))
+        (define y (box 0))
+        (define location (get-snip-location snip x y #t))
+        (scroll-editor-to (unbox x) (unbox y) 0 0 #t 'end))
+      (void))))
 
 (define input-text%
   (class gui:text%
